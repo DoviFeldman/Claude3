@@ -1,0 +1,57 @@
+{
+  "name": "Your Name",
+  "title": "Software Developer",
+  "location": "New York, NY",
+  "bio": "I build things for the web. Curious by default, caffeinated by choice. This entire portfolio's design is generated live by AI in a random style every time you ask it to.",
+  "email": "you@example.com",
+  "links": {
+    "github": "https://github.com/yourusername",
+    "linkedin": "https://linkedin.com/in/yourusername",
+    "twitter": "https://twitter.com/yourusername"
+  },
+  "skills": [
+    "JavaScript / TypeScript",
+    "React",
+    "Node.js",
+    "Python",
+    "SQL",
+    "Git",
+    "REST APIs"
+  ],
+  "projects": [
+    {
+      "name": "AI Portfolio Generator",
+      "description": "This website. A portfolio that ships as raw JSON and lets an AI design its user interface live, in a randomly chosen style, every single time.",
+      "tech": ["JavaScript", "Vercel", "Claude API"],
+      "link": "https://github.com/yourusername/portfolio"
+    },
+    {
+      "name": "Project Two",
+      "description": "A short description of another project you are proud of. What it does, who it is for, and what made it interesting to build.",
+      "tech": ["React", "Node.js", "PostgreSQL"],
+      "link": "https://example.com"
+    },
+    {
+      "name": "Project Three",
+      "description": "One more project. Replace all of this placeholder text in data.json with your real info — the whole site reads from this one file.",
+      "tech": ["Python", "FastAPI"],
+      "link": "https://example.com"
+    }
+  ],
+  "experience": [
+    {
+      "role": "Software Developer",
+      "company": "Company Name",
+      "period": "2023 – present",
+      "summary": "What you do there in one or two sentences."
+    },
+    {
+      "role": "Junior Developer",
+      "company": "Previous Company",
+      "period": "2021 – 2023",
+      "summary": "What you did there in one or two sentences."
+    }
+  ],
+  "education": "B.S. Computer Science, University Name, 2021",
+  "funFact": "Ask this site to generate its UI twice — you will never get the same design."
+}
