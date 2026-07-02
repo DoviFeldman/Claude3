@@ -45,9 +45,9 @@ the AI is required to include every field in the generated UI.
 
    | Name | Value | Required |
    |---|---|---|
-   | `ANTHROPIC_API_KEY` | your Anthropic API key | yes |
+   | `ANTHROPIC_API_KEY` | your AI API key (currently an NVIDIA key — the default provider is DeepSeek v4 via NVIDIA's free API; the env var name was just kept) | yes |
    | `ALLOWED_ORIGIN` | your GitHub Pages origin, e.g. `https://yourusername.github.io` | recommended (defaults to `*`) |
-   | `PROVIDER` | `anthropic` (default), `openai`, or `gemini` | no |
+   | `PROVIDER` | `deepseek` (default), `anthropic`, `openai`, or `gemini` | no |
 
 3. Deploy, and note your project URL (e.g. `https://my-portfolio-api.vercel.app`).
 
@@ -79,8 +79,9 @@ Your site is now at `https://yourusername.github.io/<repo>/`.
 ## Swapping the AI provider
 
 The backend calls the AI through one small abstraction: `lib/providers.js`.
-Claude is implemented; OpenAI (ChatGPT) and Gemini stubs are already there with
-working code in comments. To switch:
+DeepSeek v4 (via NVIDIA, thinking disabled) is the default and Claude is also
+fully implemented; OpenAI (ChatGPT) and Gemini stubs are there with working
+code in comments. To switch:
 
 1. `npm install openai` (or `@google/genai`) and commit the updated `package.json`.
 2. Uncomment the stub body in `lib/providers.js`.

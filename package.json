@@ -4,6 +4,7 @@
   "private": true,
   "description": "Portfolio site whose UI is designed live by AI in a random style on every visit. Static frontend on GitHub Pages, streaming API proxy on Vercel.",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.60.0"
+    "@anthropic-ai/sdk": "^0.60.0",
+    "openai": "^4.104.0"
   }
 }
