@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>portfolio.json</title>
+<style>
+  :root { color-scheme: light; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background: #ffffff;
+    color: #111111;
+    font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ---------- raw JSON view ---------- */
+  #raw-view { padding: 24px; white-space: pre-wrap; word-break: break-word; }
+  #raw-view a { color: #0000ee; text-decoration: underline; cursor: pointer; }
+
+  /* ---------- build view ---------- */
+  #build-view { display: none; height: 100vh; flex-direction: column; background: #0d1117; }
+  #build-view.active { display: flex; }
+
+  #status-bar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 16px;
+    background: #161b22; color: #c9d1d9;
+    border-bottom: 1px solid #30363d;
+    font-size: 13px;
+  }
+  #status-bar .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #d29922; flex: 0 0 auto;
+    animation: pulse 1s ease-in-out infinite;
+  }
+  #status-bar.done .dot { background: #3fb950; animation: none; }
+  #status-bar.error .dot { background: #f85149; animation: none; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  #status-words { color: #79c0ff; font-weight: bold; }
+  #status-count { color: #8b949e; margin-left: auto; }
+  #status-bar a { color: #79c0ff; }
+
+  #panes { flex: 1 1 auto; display: flex; min-height: 0; }
+  #code-pane {
+    flex: 0 0 38%;
+    overflow: hidden;
+    padding: 12px;
+    color: #7ee787;
+    font-size: 11px;
+    line-height: 1.45;
+    white-space: pre-wrap; word-break: break-all;
+    border-right: 1px solid #30363d;
+    opacity: 1;
+    transition: flex-basis 0.6s ease, opacity 0.6s ease, padding 0.6s ease;
+  }
+  #build-view.finished #code-pane { flex-basis: 0%; opacity: 0; padding: 0; border-right: none; }
+  #preview-pane { flex: 1 1 auto; min-width: 0; background: #ffffff; }
+  #preview-frame { width: 100%; height: 100%; border: 0; display: block; }
+
+  #controls {
+    position: fixed; bottom: 16px; right: 16px; z-index: 10;
+    display: none; gap: 8px;
+  }
+  #build-view.finished ~ #controls, #controls.show { display: flex; }
+  #controls button {
+    font-family: inherit; font-size: 12px;
+    background: #161b22; color: #c9d1d9;
+    border: 1px solid #30363d; border-radius: 6px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  #controls button:hover { background: #21262d; }
+</style>
+</head>
+<body>
+
+<div id="raw-view">loading data.json…</div>
+
+<div id="build-view">
+  <div id="status-bar">
+    <span class="dot"></span>
+    <span id="status-text">contacting AI…</span>
+    <span id="status-words"></span>
+    <span id="status-count"></span>
+  </div>
+  <div id="panes">
+    <div id="code-pane"></div>
+    <div id="preview-pane"><iframe id="preview-frame" title="AI generated UI"></iframe></div>
+  </div>
+</div>
+
+<div id="controls">
+  <button id="btn-regen" type="button">&#8635; regenerate UI</button>
+  <button id="btn-raw" type="button">view raw data</button>
+</div>
+
+<script>
+// ============================================================
+// CONFIG — set this to your Vercel deployment URL (no trailing /)
+// e.g. const API_BASE = "https://my-portfolio-api.vercel.app";
+// ============================================================
+const API_BASE_SETTING = "https://claude3-cyan.vercel.app";
+// If the placeholder above wasn't replaced, fall back to same-origin —
+// this makes the site work out of the box when hosted entirely on Vercel.
+const API_BASE = API_BASE_SETTING.includes("YOUR-PROJECT") ? "" : API_BASE_SETTING;
+
+let portfolioData = null;
+
+const rawView   = document.getElementById("raw-view");
+const buildView = document.getElementById("build-view");
+const statusBar = document.getElementById("status-bar");
+const statusText  = document.getElementById("status-text");
+const statusWords = document.getElementById("status-words");
+const statusCount = document.getElementById("status-count");
+const codePane  = document.getElementById("code-pane");
+const controls  = document.getElementById("controls");
+const framePane = document.getElementById("preview-pane");
+
+// ---------- raw JSON view ----------
+async function loadRaw() {
+  try {
+    const res = await fetch("data.json");
+    portfolioData = await res.json();
+  } catch (e) {
+    rawView.textContent = "failed to load data.json: " + e.message;
+    return;
+  }
+
+  const lines = JSON.stringify(portfolioData, null, 2).split("\n");
+  rawView.textContent = "";
+
+  // line 1: opening brace of the JSON
+  rawView.appendChild(document.createTextNode(lines[0] + "\n"));
+
+  // line 2: the magic link
+  rawView.appendChild(document.createTextNode('  "//": "to generate a User Interface click '));
+  const a = document.createElement("a");
+  a.textContent = "here";
+  a.href = "#";
+  a.addEventListener("click", (e) => { e.preventDefault(); generateUI(); });
+  rawView.appendChild(a);
+  rawView.appendChild(document.createTextNode('",\n'));
+
+  // the rest of the data
+  rawView.appendChild(document.createTextNode(lines.slice(1).join("\n")));
+}
+
+// ---------- real-time AI build ----------
+async function generateUI() {
+  buildView.classList.remove("finished");
+  statusBar.classList.remove("done", "error");
+  statusText.textContent = "contacting AI…";
+  statusWords.textContent = "";
+  statusCount.textContent = "";
+  codePane.textContent = "";
+  controls.classList.remove("show");
+
+  rawView.style.display = "none";
+  buildView.classList.add("active");
+
+  // fresh iframe each run (open/write/close streams progressively)
+  const oldFrame = document.getElementById("preview-frame");
+  const frame = document.createElement("iframe");
+  frame.id = "preview-frame";
+  frame.title = "AI generated UI";
+  oldFrame.replaceWith(frame);
+  const doc = frame.contentDocument;
+  doc.open();
+
+  let charCount = 0;
+  try {
+    const res = await fetch(API_BASE + "/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: portfolioData }),
+    });
+    if (!res.ok || !res.body) {
+      throw new Error("API responded " + res.status + " " + (await res.text().catch(() => "")).slice(0, 200));
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let headerParsed = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      if (!headerParsed) {
+        const nl = buffer.indexOf("\n");
+        if (nl === -1) continue; // header line not complete yet
+        const headerLine = buffer.slice(0, nl);
+        buffer = buffer.slice(nl + 1);
+        try {
+          const header = JSON.parse(headerLine);
+          statusWords.textContent = (header.words || []).join(" · ");
+          statusText.textContent = "building UI in the style of:";
+        } catch (e) {
+          // no header — treat it as content
+          buffer = headerLine + "\n" + buffer;
+        }
+        headerParsed = true;
+      }
+
+      if (buffer) {
+        const chunk = buffer;
+        buffer = "";
+        charCount += chunk.length;
+        doc.write(chunk);                 // real progressive rendering
+        appendCode(chunk);
+        statusCount.textContent = charCount.toLocaleString() + " chars streamed";
+      }
+    }
+
+    doc.close();
+    statusBar.classList.add("done");
+    statusText.textContent = "UI generated in the style of:";
+    buildView.classList.add("finished");
+    controls.classList.add("show");
+  } catch (err) {
+    try { doc.close(); } catch (e) {}
+    statusBar.classList.add("error");
+    statusText.textContent = "generation failed: " + err.message + " — ";
+    const retry = document.createElement("a");
+    retry.textContent = "retry";
+    retry.href = "#";
+    retry.addEventListener("click", (e) => { e.preventDefault(); generateUI(); });
+    statusText.appendChild(retry);
+    controls.classList.add("show");
+  }
+}
+
+// keep the code pane pinned to the bottom, terminal-style
+function appendCode(text) {
+  codePane.appendChild(document.createTextNode(text));
+  // trim so the DOM doesn't grow unbounded
+  while (codePane.textContent.length > 40000) {
+    codePane.removeChild(codePane.firstChild);
+  }
+  codePane.scrollTop = codePane.scrollHeight;
+}
+
+// ---------- controls ----------
+document.getElementById("btn-regen").addEventListener("click", generateUI);
+document.getElementById("btn-raw").addEventListener("click", () => {
+  buildView.classList.remove("active", "finished");
+  controls.classList.remove("show");
+  rawView.style.display = "block";
+});
+
+loadRaw();
+</script>
+</body>
+</html>
