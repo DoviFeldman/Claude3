@@ -125,10 +125,15 @@ module.exports = async function handler(req, res) {
   });
   res.write(JSON.stringify({ words }) + "\n");
 
+  // Optional per-request model override (used for testing which NVIDIA
+  // models are available). Falls back to NVIDIA_MODEL / the default.
+  const modelOverride = typeof req.body.model === "string" ? req.body.model : undefined;
+
   try {
     await streamUI({
       systemPrompt,
       userPrompt,
+      model: modelOverride,
       onText: (chunk) => res.write(chunk),
     });
   } catch (err) {
