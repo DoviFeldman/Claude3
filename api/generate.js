@@ -100,6 +100,9 @@ module.exports = async function handler(req, res) {
     "- Add tasteful animations and micro-interactions. Be bold and distinctive, not generic.",
     "- Structure the HTML so it looks good even while streaming in: put the <style> tag",
     "  early in <head>, and order the <body> top-to-bottom in visual order.",
+    "- Keep it CONCISE and fast to generate: the entire HTML document should be roughly",
+    "  150 lines total (about 130-170 is fine). A tight, elegant page renders quickly and",
+    "  looks intentional — favor clean design over length, and do not pad the code.",
   ].join("\n");
 
   const userPrompt = [
