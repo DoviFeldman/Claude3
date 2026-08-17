@@ -62,18 +62,6 @@
   #preview-pane { flex: 1 1 auto; min-width: 0; background: #0d1117; }
   #preview-frame { width: 100%; height: 100%; border: 0; display: block; }
 
-  #controls {
-    position: fixed; bottom: 16px; right: 16px; z-index: 10;
-    display: none; gap: 8px;
-  }
-  #build-view.finished ~ #controls, #controls.show { display: flex; }
-  #controls button {
-    font-family: inherit; font-size: 12px;
-    background: #161b22; color: #c9d1d9;
-    border: 1px solid #30363d; border-radius: 6px;
-    padding: 6px 12px; cursor: pointer;
-  }
-  #controls button:hover { background: #21262d; }
 </style>
 </head>
 <body>
@@ -91,11 +79,6 @@
     <div id="code-pane"></div>
     <div id="preview-pane"><iframe id="preview-frame" title="AI generated UI"></iframe></div>
   </div>
-</div>
-
-<div id="controls">
-  <button id="btn-regen" type="button">&#8635; regenerate UI</button>
-  <button id="btn-raw" type="button">view raw data</button>
 </div>
 
 <script>
@@ -117,7 +100,6 @@ const statusText  = document.getElementById("status-text");
 const statusWords = document.getElementById("status-words");
 const statusCount = document.getElementById("status-count");
 const codePane  = document.getElementById("code-pane");
-const controls  = document.getElementById("controls");
 const framePane = document.getElementById("preview-pane");
 
 // ---------- raw JSON view ----------
@@ -157,7 +139,6 @@ async function generateUI() {
   statusWords.textContent = "";
   statusCount.textContent = "";
   codePane.textContent = "";
-  controls.classList.remove("show");
 
   rawView.style.display = "none";
   buildView.classList.add("active");
@@ -220,7 +201,6 @@ async function generateUI() {
     doc.close();
     statusBar.classList.add("done");
     buildView.classList.add("finished");
-    controls.classList.add("show");
   } catch (err) {
     try { doc.close(); } catch (e) {}
     statusBar.classList.add("error");
@@ -230,7 +210,6 @@ async function generateUI() {
     retry.href = "#";
     retry.addEventListener("click", (e) => { e.preventDefault(); generateUI(); });
     statusText.appendChild(retry);
-    controls.classList.add("show");
   }
 }
 
@@ -243,14 +222,6 @@ function appendCode(text) {
   }
   codePane.scrollTop = codePane.scrollHeight;
 }
-
-// ---------- controls ----------
-document.getElementById("btn-regen").addEventListener("click", generateUI);
-document.getElementById("btn-raw").addEventListener("click", () => {
-  buildView.classList.remove("active", "finished");
-  controls.classList.remove("show");
-  rawView.style.display = "block";
-});
 
 loadRaw();
 </script>

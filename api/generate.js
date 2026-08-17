@@ -85,7 +85,16 @@ module.exports = async function handler(req, res) {
 
   const words = await getRandomWords();
 
-  const systemPrompt = [
+  // ── SINGLE-PAGE (no-scroll, desktop) MODE ────────────────────────────────
+  // When true, the AI is told to fit the ENTIRE generated UI on one desktop
+  // screen so the visitor never scrolls (optimized for computer/laptop).
+  //
+  // TO REVERT: set SINGLE_PAGE_MODE to false. That returns the prompt to its
+  // original neutral behavior — it will NOT ask for a single no-scroll page,
+  // and it will NOT ask for a longer scrolling page either. See NOTES.md.
+  const SINGLE_PAGE_MODE = true;
+
+  const systemPromptLines = [
     "You are a world-class web designer. You output ONLY a single, complete,",
     "self-contained HTML document. No markdown, no code fences, no commentary,",
     "no explanation before or after. Your very first characters must be <!DOCTYPE html>.",
@@ -103,7 +112,20 @@ module.exports = async function handler(req, res) {
     "- Keep it CONCISE and fast to generate: the entire HTML document should be roughly",
     "  150 lines total (about 130-170 is fine). A tight, elegant page renders quickly and",
     "  looks intentional — favor clean design over length, and do not pad the code.",
-  ].join("\n");
+  ];
+
+  if (SINGLE_PAGE_MODE) {
+    systemPromptLines.push(
+      "- SINGLE PAGE, NO SCROLLING (optimized for computer): the ENTIRE page MUST fit",
+      "  within one desktop viewport (design for ~1440x900, a typical laptop screen) so",
+      "  the visitor never has to scroll. Set html and body to height:100vh with",
+      "  overflow:hidden. Fit ALL sections on that one screen using a compact",
+      "  multi-column / grid layout, scaling spacing and font sizes down as needed.",
+      "  Nothing may overflow off-screen — everything is visible at once."
+    );
+  }
+
+  const systemPrompt = systemPromptLines.join("\n");
 
   const userPrompt = [
     `Design a website UI for this website based on the style of: ${words.join(", ")}.`,
