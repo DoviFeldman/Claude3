@@ -38,6 +38,8 @@
   }
   #status-bar.done .dot { background: #3fb950; animation: none; }
   #status-bar.error .dot { background: #f85149; animation: none; }
+  /* once the UI is built, drop the status bar entirely */
+  #build-view.finished #status-bar { display: none; }
   @keyframes pulse { 50% { opacity: 0.3; } }
   #status-words { color: #79c0ff; font-weight: bold; }
   #status-count { color: #8b949e; margin-left: auto; }
@@ -196,9 +198,8 @@ async function generateUI() {
         const headerLine = buffer.slice(0, nl);
         buffer = buffer.slice(nl + 1);
         try {
-          const header = JSON.parse(headerLine);
-          statusWords.textContent = (header.words || []).join(" · ");
-          statusText.textContent = "building UI in the style of:";
+          JSON.parse(headerLine); // consume + discard the header (don't reveal it)
+          statusText.textContent = "generating your UI…";
         } catch (e) {
           // no header — treat it as content
           buffer = headerLine + "\n" + buffer;
@@ -218,7 +219,6 @@ async function generateUI() {
 
     doc.close();
     statusBar.classList.add("done");
-    statusText.textContent = "UI generated in the style of:";
     buildView.classList.add("finished");
     controls.classList.add("show");
   } catch (err) {
