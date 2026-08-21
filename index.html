@@ -5,81 +5,119 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>portfolio.json</title>
 <style>
-  :root { color-scheme: dark; }
-  html, body { margin: 0; padding: 0; height: 100%; }
+  :root {
+    color-scheme: dark;
+    /* UI design tokens — the AI theme may override any of these */
+    --ui-bg: #0d1117;
+    --ui-fg: #c9d1d9;
+    --ui-muted: #8b949e;
+    --ui-accent: #79c0ff;
+    --ui-border: #30363d;
+    --ui-card: #161b22;
+    --ui-chip: #161b22;
+  }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
   body {
-    background: #0d1117;
-    color: #c9d1d9;
-    font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+    background: var(--ui-bg);
+    color: var(--ui-fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     font-size: 14px;
     line-height: 1.6;
   }
+  a { color: var(--ui-accent); }
 
-  /* ---------- raw JSON view ---------- */
-  #raw-view { padding: 24px; white-space: pre-wrap; word-break: break-word; }
-  #raw-view a { color: #79c0ff; text-decoration: underline; cursor: pointer; }
-
-  /* ---------- build view ---------- */
-  #build-view { display: none; height: 100vh; flex-direction: column; background: #0d1117; }
-  #build-view.active { display: flex; }
-
-  #status-bar {
-    flex: 0 0 auto;
-    display: flex; align-items: center; gap: 16px;
-    padding: 10px 16px;
+  /* ---------- thin status strip (minimal, hard-cut only) ---------- */
+  #status {
+    display: none;
+    position: sticky; top: 0; z-index: 20;
+    align-items: center; gap: 12px;
+    padding: 8px 16px;
     background: #161b22; color: #c9d1d9;
     border-bottom: 1px solid #30363d;
-    font-size: 13px;
+    font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 12px;
   }
-  #status-bar .dot {
+  #status.show { display: flex; }
+  #status .dot {
     width: 8px; height: 8px; border-radius: 50%;
     background: #d29922; flex: 0 0 auto;
-    animation: pulse 1s ease-in-out infinite;
+    animation: pulse 1s ease-in-out infinite; /* tiny status pulse only */
   }
-  #status-bar.done .dot { background: #3fb950; animation: none; }
-  #status-bar.error .dot { background: #f85149; animation: none; }
-  /* once the UI is built, drop the status bar entirely */
-  #build-view.finished #status-bar { display: none; }
+  #status.done .dot { background: #3fb950; animation: none; }
+  #status.error .dot { background: #f85149; animation: none; }
   @keyframes pulse { 50% { opacity: 0.3; } }
   #status-words { color: #79c0ff; font-weight: bold; }
   #status-count { color: #8b949e; margin-left: auto; }
-  #status-bar a { color: #79c0ff; }
+  #status a { color: #79c0ff; }
 
-  #panes { flex: 1 1 auto; display: flex; min-height: 0; }
-  #code-pane {
-    flex: 0 0 38%;
-    overflow: hidden;
-    padding: 12px;
-    color: #7ee787;
-    font-size: 11px;
-    line-height: 1.45;
-    white-space: pre-wrap; word-break: break-all;
-    border-right: 1px solid #30363d;
-    opacity: 1;
-    transition: flex-basis 0.6s ease, opacity 0.6s ease, padding 0.6s ease;
+  /* ---------- the stage: JSON scaffold that becomes the portfolio ---------- */
+  #stage {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
-  #build-view.finished #code-pane { flex-basis: 0%; opacity: 0; padding: 0; border-right: none; }
-  #preview-pane { flex: 1 1 auto; min-width: 0; background: #0d1117; }
-  #preview-frame { width: 100%; height: 100%; border: 0; display: block; }
+  /* raw-JSON chrome is monospace; swapped UI nodes inherit system-ui */
+  .jline, .jblock {
+    font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+  }
+  .jkey { color: #7ee787; }
+  .jval { color: #a5d6ff; }
+  .jpunc, .jbrace { color: #8b949e; }
+  #stage .jline a { color: #79c0ff; text-decoration: underline; cursor: pointer; }
 
+  /* ---------- generated UI component defaults (AI theme overrides these) ---------- */
+  .ui-name { font-size: 2.1rem; font-weight: 700; margin: 0; color: var(--ui-fg); }
+  .ui-title { font-size: 1.1rem; margin: 0; color: var(--ui-muted); }
+  .ui-meta { font-size: 0.9rem; color: var(--ui-muted); margin-right: 14px; }
+  .ui-email { color: var(--ui-accent); text-decoration: none; }
+  .ui-bio { font-size: 1rem; line-height: 1.6; max-width: 65ch; margin: 4px 0; color: var(--ui-fg); }
+
+  .ui-section { display: flex; flex-direction: column; gap: 10px; }
+  .ui-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ui-muted); }
+
+  .ui-links { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ui-link { color: var(--ui-accent); text-decoration: none; border: 1px solid var(--ui-border); padding: 4px 12px; border-radius: 6px; font-size: 0.85rem; }
+
+  .ui-skills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ui-chip { background: var(--ui-chip); border: 1px solid var(--ui-border); color: var(--ui-fg); padding: 4px 11px; border-radius: 999px; font-size: 0.85rem; }
+
+  .ui-projects { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .ui-card { background: var(--ui-card); border: 1px solid var(--ui-border); border-radius: 10px; padding: 14px; }
+  .ui-card h3 { margin: 0 0 6px; font-size: 1rem; color: var(--ui-fg); }
+  .ui-card p { margin: 0 0 8px; font-size: 0.85rem; line-height: 1.5; color: var(--ui-muted); }
+  .ui-tech { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ui-tag { font-size: 0.72rem; background: var(--ui-chip); border: 1px solid var(--ui-border); padding: 2px 7px; border-radius: 5px; color: var(--ui-muted); }
+  .ui-cardlink { display: inline-block; margin-top: 6px; font-size: 0.8rem; color: var(--ui-accent); text-decoration: none; }
+
+  .ui-exp-list { display: flex; flex-direction: column; gap: 12px; }
+  .ui-exp { display: flex; flex-direction: column; gap: 2px; }
+  .ui-exp-role { font-weight: 600; }
+  .ui-exp-co { color: var(--ui-accent); font-size: 0.9rem; }
+  .ui-exp-period { color: var(--ui-muted); font-size: 0.8rem; }
+  .ui-exp-sum { margin: 2px 0 0; font-size: 0.88rem; color: var(--ui-muted); }
+
+  .ui-edu, .ui-fun { font-size: 0.92rem; color: var(--ui-muted); margin: 0; }
 </style>
+<style id="ai-theme"></style>
 </head>
 <body>
 
-<div id="raw-view">loading data.json…</div>
-
-<div id="build-view">
-  <div id="status-bar">
-    <span class="dot"></span>
-    <span id="status-text">contacting AI…</span>
-    <span id="status-words"></span>
-    <span id="status-count"></span>
-  </div>
-  <div id="panes">
-    <div id="code-pane"></div>
-    <div id="preview-pane"><iframe id="preview-frame" title="AI generated UI"></iframe></div>
-  </div>
+<div id="status">
+  <span class="dot"></span>
+  <span id="status-text">contacting AI…</span>
+  <span id="status-words"></span>
+  <span id="status-count"></span>
 </div>
+
+<div id="stage">loading data.json…</div>
 
 <script>
 // ============================================================
@@ -87,80 +125,317 @@
 // e.g. const API_BASE = "https://my-portfolio-api.vercel.app";
 // ============================================================
 const API_BASE_SETTING = "https://claude3-cyan.vercel.app";
-// If the placeholder above wasn't replaced, fall back to same-origin —
-// this makes the site work out of the box when hosted entirely on Vercel.
 const API_BASE = API_BASE_SETTING.includes("YOUR-PROJECT") ? "" : API_BASE_SETTING;
 
-let portfolioData = null;
+const REVEAL_MS = 55; // pacing between hard-cut swaps (timed, NOT a CSS animation)
 
-const rawView   = document.getElementById("raw-view");
-const buildView = document.getElementById("build-view");
-const statusBar = document.getElementById("status-bar");
+let data = null;
+
+const stage       = document.getElementById("stage");
+const statusBar   = document.getElementById("status");
 const statusText  = document.getElementById("status-text");
 const statusWords = document.getElementById("status-words");
 const statusCount = document.getElementById("status-count");
-const codePane  = document.getElementById("code-pane");
-const framePane = document.getElementById("preview-pane");
+const aiTheme     = document.getElementById("ai-theme");
 
-// ---------- raw JSON view ----------
-async function loadRaw() {
-  try {
-    const res = await fetch("data.json");
-    portfolioData = await res.json();
-  } catch (e) {
-    rawView.textContent = "failed to load data.json: " + e.message;
-    return;
+// ---------- tiny DOM helpers ----------
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function tok(cls, text) { return el("span", cls, text); }
+function trunc(s, n) { s = String(s); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+function q(s, n) { return '"' + trunc(s, n || 48) + '"'; }
+function jval(slot, text) { const s = el("span", "jval", text); s.dataset.slot = slot; return s; }
+function jline(lineId) {
+  const d = el("div", "jline");
+  if (lineId) d.dataset.line = lineId;
+  for (let i = 2; i < arguments.length; i++) {
+    const k = arguments[i];
+    d.appendChild(typeof k === "string" ? document.createTextNode(k) : k);
   }
-
-  const lines = JSON.stringify(portfolioData, null, 2).split("\n");
-  rawView.textContent = "";
-
-  // line 1: opening brace of the JSON
-  rawView.appendChild(document.createTextNode(lines[0] + "\n"));
-
-  // line 2: the magic link
-  rawView.appendChild(document.createTextNode('  "//": "to generate a User Interface click '));
-  const a = document.createElement("a");
-  a.textContent = "here";
-  a.href = "#";
-  a.addEventListener("click", (e) => { e.preventDefault(); generateUI(); });
-  rawView.appendChild(a);
-  rawView.appendChild(document.createTextNode('",\n'));
-
-  // the rest of the data
-  rawView.appendChild(document.createTextNode(lines.slice(1).join("\n")));
+  return d;
 }
 
-// ---------- real-time AI build ----------
+// ---------- the ordered list of data slots (client = server) ----------
+function buildSlotOrder(d) {
+  const order = [];
+  ["name", "title", "location", "bio", "email"].forEach((k) => {
+    if (d[k] != null && d[k] !== "") order.push(k);
+  });
+  if (d.links && typeof d.links === "object") Object.keys(d.links).forEach((k) => order.push("link-" + k));
+  if (Array.isArray(d.skills)) d.skills.forEach((_, i) => order.push("skill-" + i));
+  if (Array.isArray(d.projects)) d.projects.forEach((_, i) => order.push("project-" + i));
+  if (Array.isArray(d.experience)) d.experience.forEach((_, i) => order.push("exp-" + i));
+  if (d.education != null && d.education !== "") order.push("education");
+  if (d.funFact != null && d.funFact !== "") order.push("funfact");
+  return order;
+}
+
+// ---------- build the raw-JSON scaffold ----------
+function buildScaffold() {
+  stage.className = "ui-root";
+  stage.textContent = "";
+
+  stage.appendChild(jline("outer-open", tok("jbrace", "{")));
+
+  // the magic link line
+  const magic = jline("magic", "  ", tok("jkey", '"//"'), tok("jpunc", ": "),
+    document.createTextNode('"to generate a User Interface click '));
+  const a = el("a", null, "here");
+  a.href = "#";
+  a.addEventListener("click", (e) => { e.preventDefault(); generateUI(); });
+  magic.appendChild(a);
+  magic.appendChild(tok("jpunc", '",'));
+  stage.appendChild(magic);
+
+  const simple = [
+    ["name", '"name"'], ["title", '"title"'], ["location", '"location"'],
+    ["bio", '"bio"'], ["email", '"email"'],
+  ];
+  simple.forEach(([slot, key]) => {
+    if (data[slot] == null || data[slot] === "") return;
+    stage.appendChild(jline(slot, "  ", tok("jkey", key), tok("jpunc", ": "),
+      jval(slot, q(data[slot], slot === "bio" ? 64 : 48)), tok("jpunc", ",")));
+  });
+
+  // links
+  if (data.links && Object.keys(data.links).length) {
+    stage.appendChild(jline("links-open", "  ", tok("jkey", '"links"'), tok("jpunc", ": {")));
+    Object.keys(data.links).forEach((k) => {
+      stage.appendChild(jline("link-" + k, "    ", tok("jkey", '"' + k + '"'), tok("jpunc", ": "),
+        jval("link-" + k, q(data.links[k])), tok("jpunc", ",")));
+    });
+    stage.appendChild(jline("links-close", "  ", tok("jpunc", "},")));
+  }
+
+  // skills
+  if (Array.isArray(data.skills) && data.skills.length) {
+    stage.appendChild(jline("skills-open", "  ", tok("jkey", '"skills"'), tok("jpunc", ": [")));
+    data.skills.forEach((s, i) => {
+      stage.appendChild(jline("skill-" + i, "    ", jval("skill-" + i, q(s)), tok("jpunc", ",")));
+    });
+    stage.appendChild(jline("skills-close", "  ", tok("jpunc", "],")));
+  }
+
+  // projects (each project is a swappable block)
+  if (Array.isArray(data.projects) && data.projects.length) {
+    stage.appendChild(jline("projects-open", "  ", tok("jkey", '"projects"'), tok("jpunc", ": [")));
+    data.projects.forEach((p, i) => {
+      const block = el("div", "jblock");
+      block.dataset.line = "project-" + i;
+      block.textContent =
+        '    {\n' +
+        '      "name": ' + q(p.name) + ',\n' +
+        '      "description": ' + q(p.description, 70) + ',\n' +
+        (Array.isArray(p.tech) ? '      "tech": [' + p.tech.map((t) => q(t, 20)).join(", ") + '],\n' : '') +
+        (p.link ? '      "link": ' + q(p.link) + '\n' : '') +
+        '    },';
+      stage.appendChild(block);
+    });
+    stage.appendChild(jline("projects-close", "  ", tok("jpunc", "],")));
+  }
+
+  // experience (each item is a swappable block)
+  if (Array.isArray(data.experience) && data.experience.length) {
+    stage.appendChild(jline("experience-open", "  ", tok("jkey", '"experience"'), tok("jpunc", ": [")));
+    data.experience.forEach((x, i) => {
+      const block = el("div", "jblock");
+      block.dataset.line = "exp-" + i;
+      block.textContent =
+        '    {\n' +
+        '      "role": ' + q(x.role) + ',\n' +
+        '      "company": ' + q(x.company) + ',\n' +
+        '      "period": ' + q(x.period) + ',\n' +
+        '      "summary": ' + q(x.summary, 60) + '\n' +
+        '    },';
+      stage.appendChild(block);
+    });
+    stage.appendChild(jline("experience-close", "  ", tok("jpunc", "],")));
+  }
+
+  if (data.education != null && data.education !== "") {
+    stage.appendChild(jline("education", "  ", tok("jkey", '"education"'), tok("jpunc", ": "),
+      jval("education", q(data.education, 60)), tok("jpunc", ",")));
+  }
+  if (data.funFact != null && data.funFact !== "") {
+    stage.appendChild(jline("funfact", "  ", tok("jkey", '"funFact"'), tok("jpunc", ": "),
+      jval("funfact", q(data.funFact, 60))));
+  }
+
+  stage.appendChild(jline("outer-close", tok("jbrace", "}")));
+}
+
+// ---------- render functions (content always from data.json) ----------
+function renderSimple(slot) {
+  switch (slot) {
+    case "name":      return el("h1", "ui-name", data.name);
+    case "title":     return el("p", "ui-title", data.title);
+    case "location":  return el("span", "ui-meta", "📍 " + data.location);
+    case "email": {
+      const a = el("a", "ui-meta ui-email", data.email);
+      a.href = "mailto:" + data.email; return a;
+    }
+    case "bio":       return el("p", "ui-bio", data.bio);
+    case "education": return el("p", "ui-edu", "🎓 " + data.education);
+    case "funfact":   return el("p", "ui-fun", "✨ " + data.funFact);
+  }
+  return null;
+}
+function renderLink(key) {
+  const a = el("a", "ui-link", key);
+  a.href = data.links[key]; a.target = "_blank"; a.rel = "noopener";
+  return a;
+}
+function renderSkill(i) { return el("span", "ui-chip", data.skills[i]); }
+function renderProject(i) {
+  const p = data.projects[i];
+  const card = el("article", "ui-card");
+  card.appendChild(el("h3", null, p.name));
+  if (p.description) card.appendChild(el("p", null, p.description));
+  if (Array.isArray(p.tech)) {
+    const t = el("div", "ui-tech");
+    p.tech.forEach((x) => t.appendChild(el("span", "ui-tag", x)));
+    card.appendChild(t);
+  }
+  if (p.link) {
+    const a = el("a", "ui-cardlink", "View project →");
+    a.href = p.link; a.target = "_blank"; a.rel = "noopener";
+    card.appendChild(a);
+  }
+  return card;
+}
+function renderExp(i) {
+  const x = data.experience[i];
+  const box = el("div", "ui-exp");
+  box.appendChild(el("span", "ui-exp-role", x.role));
+  box.appendChild(el("span", "ui-exp-co", x.company));
+  box.appendChild(el("span", "ui-exp-period", x.period));
+  if (x.summary) box.appendChild(el("p", "ui-exp-sum", x.summary));
+  return box;
+}
+
+// ---------- reveal engine (hard swaps only) ----------
+let revealed, groups;
+
+function removeLine(id) {
+  const n = stage.querySelector('[data-line="' + id + '"]');
+  if (n) n.remove();
+}
+function ensureGroup(name, label, containerClass, openId, closeId) {
+  if (groups[name]) return groups[name];
+  const section = el("div", "ui-section");
+  if (label) section.appendChild(el("div", "ui-label", label));
+  const container = el("div", containerClass);
+  section.appendChild(container);
+  const open = stage.querySelector('[data-line="' + openId + '"]');
+  if (open) open.replaceWith(section); else stage.appendChild(section);
+  removeLine(closeId);
+  groups[name] = container;
+  return container;
+}
+
+function revealSlot(slot) {
+  if (revealed.has(slot)) return;
+  revealed.add(slot);
+
+  if (slot.indexOf("link-") === 0) {
+    ensureGroup("links", "Links", "ui-links", "links-open", "links-close")
+      .appendChild(renderLink(slot.slice(5)));
+    removeLine(slot);
+  } else if (slot.indexOf("skill-") === 0) {
+    ensureGroup("skills", "Skills", "ui-skills", "skills-open", "skills-close")
+      .appendChild(renderSkill(+slot.slice(6)));
+    removeLine(slot);
+  } else if (slot.indexOf("project-") === 0) {
+    ensureGroup("projects", "Projects", "ui-projects", "projects-open", "projects-close")
+      .appendChild(renderProject(+slot.slice(8)));
+    removeLine(slot);
+  } else if (slot.indexOf("exp-") === 0) {
+    ensureGroup("experience", "Experience", "ui-exp-list", "experience-open", "experience-close")
+      .appendChild(renderExp(+slot.slice(4)));
+    removeLine(slot);
+  } else {
+    const node = renderSimple(slot);
+    if (!node) return;
+    const line = stage.querySelector('[data-line="' + slot + '"]');
+    if (line) line.replaceWith(node); else stage.appendChild(node);
+  }
+  statusCount.textContent = revealed.size + " fields";
+}
+
+// ---------- paced event queue ----------
+let queue, pumping, streamClosed, finished;
+
+function enqueue(slot) { queue.push(slot); if (!pumping) pump(); }
+function pump() {
+  if (queue.length === 0) { pumping = false; maybeFinish(); return; }
+  pumping = true;
+  revealSlot(queue.shift());
+  setTimeout(pump, REVEAL_MS);
+}
+function maybeFinish() {
+  if (!streamClosed || pumping || finished) return;
+  finish();
+}
+function finish() {
+  if (finished) return;
+  finished = true;
+  buildSlotOrder(data).forEach(revealSlot);          // sweep: nothing left as raw JSON
+  stage.querySelectorAll(".jline, .jblock").forEach((n) => n.remove()); // drop remaining chrome
+  statusBar.classList.add("done");
+  statusText.textContent = "done";
+  statusWords.textContent = "";
+  setTimeout(() => statusBar.classList.remove("show"), 900);
+}
+
+function applyTheme(css) {
+  try { aiTheme.textContent = css || ""; } catch (e) {}
+}
+
+// ---------- run a generation ----------
 async function generateUI() {
-  buildView.classList.remove("finished");
-  statusBar.classList.remove("done", "error");
+  // reset to a fresh scaffold (also handles retry / re-generate)
+  buildScaffold();
+  removeLine("magic");
+  aiTheme.textContent = "";
+  revealed = new Set();
+  groups = {};
+  queue = [];
+  pumping = false;
+  streamClosed = false;
+  finished = false;
+
+  statusBar.className = "show";
   statusText.textContent = "contacting AI…";
   statusWords.textContent = "";
   statusCount.textContent = "";
-  codePane.textContent = "";
 
-  rawView.style.display = "none";
-  buildView.classList.add("active");
+  let themeMode = false, cssBuf = "";
+  const onLine = (raw) => {
+    const line = raw.replace(/\r$/, "");
+    const t = line.trim();
+    if (themeMode) {
+      if (t === "@endtheme") { applyTheme(cssBuf); themeMode = false; }
+      else cssBuf += line + "\n";
+      return;
+    }
+    if (t === "@theme") { themeMode = true; cssBuf = ""; return; }
+    if (t.indexOf("@show") === 0) { const s = t.slice(5).trim(); if (s) enqueue(s); return; }
+    // @done and any stray lines: ignore (finish is driven by stream close)
+  };
 
-  // fresh iframe each run (open/write/close streams progressively)
-  const oldFrame = document.getElementById("preview-frame");
-  const frame = document.createElement("iframe");
-  frame.id = "preview-frame";
-  frame.title = "AI generated UI";
-  oldFrame.replaceWith(frame);
-  const doc = frame.contentDocument;
-  doc.open();
-
-  let charCount = 0;
   try {
     const res = await fetch(API_BASE + "/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: portfolioData }),
+      body: JSON.stringify({ data }),
     });
     if (!res.ok || !res.body) {
-      throw new Error("API responded " + res.status + " " + (await res.text().catch(() => "")).slice(0, 200));
+      throw new Error("API responded " + res.status + " " +
+        (await res.text().catch(() => "")).slice(0, 160));
     }
 
     const reader = res.body.getReader();
@@ -173,57 +448,52 @@ async function generateUI() {
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
 
-      if (!headerParsed) {
-        const nl = buffer.indexOf("\n");
-        if (nl === -1) continue; // header line not complete yet
-        const headerLine = buffer.slice(0, nl);
+      let nl;
+      while ((nl = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, nl);
         buffer = buffer.slice(nl + 1);
-        try {
-          JSON.parse(headerLine); // consume + discard the header (don't reveal it)
-          statusText.textContent = "generating your UI…";
-        } catch (e) {
-          // no header — treat it as content
-          buffer = headerLine + "\n" + buffer;
+        if (!headerParsed) {
+          headerParsed = true;
+          try {
+            const h = JSON.parse(line);
+            if (h && Array.isArray(h.words)) {
+              statusWords.textContent = h.words.join(" · ");
+              statusText.textContent = "generating…";
+              continue;
+            }
+          } catch (e) { /* not a header — treat as a protocol line */ }
         }
-        headerParsed = true;
-      }
-
-      if (buffer) {
-        const chunk = buffer;
-        buffer = "";
-        charCount += chunk.length;
-        doc.write(chunk);                 // real progressive rendering
-        appendCode(chunk);
-        statusCount.textContent = charCount.toLocaleString() + " chars streamed";
+        onLine(line);
       }
     }
+    if (buffer.length) onLine(buffer);      // trailing partial line
+    if (themeMode) applyTheme(cssBuf);       // stream ended mid-theme
 
-    doc.close();
-    statusBar.classList.add("done");
-    buildView.classList.add("finished");
+    streamClosed = true;
+    maybeFinish();
   } catch (err) {
-    try { doc.close(); } catch (e) {}
+    streamClosed = true;
     statusBar.classList.add("error");
     statusText.textContent = "generation failed: " + err.message + " — ";
-    const retry = document.createElement("a");
-    retry.textContent = "retry";
+    const retry = el("a", null, "retry");
     retry.href = "#";
     retry.addEventListener("click", (e) => { e.preventDefault(); generateUI(); });
     statusText.appendChild(retry);
   }
 }
 
-// keep the code pane pinned to the bottom, terminal-style
-function appendCode(text) {
-  codePane.appendChild(document.createTextNode(text));
-  // trim so the DOM doesn't grow unbounded
-  while (codePane.textContent.length > 40000) {
-    codePane.removeChild(codePane.firstChild);
+// ---------- boot ----------
+async function boot() {
+  try {
+    const res = await fetch("data.json");
+    data = await res.json();
+  } catch (e) {
+    stage.textContent = "failed to load data.json: " + e.message;
+    return;
   }
-  codePane.scrollTop = codePane.scrollHeight;
+  buildScaffold();
 }
-
-loadRaw();
+boot();
 </script>
 </body>
 </html>

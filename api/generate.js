@@ -3,13 +3,24 @@
 //
 // Body: { "data": { ...portfolio json... } }
 //
-// Response: a stream where the FIRST LINE is a JSON header
-//   {"words":["neon","cactus","velvet"]}
-// and everything after it is raw HTML, streamed live from the
-// AI as it is generated.
+// Response: a plain-text stream in the "Field Swap" protocol.
+//   Line 1 (JSON header):   {"words":["neon","cactus","velvet"]}
+//   Then:                   @theme
+//                           ...raw CSS styling the .ui-* classes...
+//                           @endtheme
+//                           @show name
+//                           @show title
+//                           @show skill-0
+//                           ... (one @show per data slot, in order)
+//                           @done
 //
-// The AI API key lives only in Vercel env vars — visitors never
-// see it.
+// The client renders every field's CONTENT from data.json (so the
+// model can never invent or alter the data); the model only supplies
+// the theme CSS and the reveal order/pacing. The client also sweeps
+// any un-shown slots when the stream ends, so the page is always
+// complete even if the model's output is imperfect.
+//
+// The AI API key lives only in Vercel env vars — visitors never see it.
 // ============================================================
 
 const { streamUI } = require("../lib/providers");
@@ -52,6 +63,21 @@ async function getRandomWords() {
   }
 }
 
+// Build the ordered list of data slot ids (must match the client in index.html).
+function buildSlotOrder(d) {
+  const order = [];
+  ["name", "title", "location", "bio", "email"].forEach((k) => {
+    if (d[k] != null && d[k] !== "") order.push(k);
+  });
+  if (d.links && typeof d.links === "object") Object.keys(d.links).forEach((k) => order.push("link-" + k));
+  if (Array.isArray(d.skills)) d.skills.forEach((_, i) => order.push("skill-" + i));
+  if (Array.isArray(d.projects)) d.projects.forEach((_, i) => order.push("project-" + i));
+  if (Array.isArray(d.experience)) d.experience.forEach((_, i) => order.push("exp-" + i));
+  if (d.education != null && d.education !== "") order.push("education");
+  if (d.funFact != null && d.funFact !== "") order.push("funfact");
+  return order;
+}
+
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -84,61 +110,53 @@ module.exports = async function handler(req, res) {
   }
 
   const words = await getRandomWords();
+  const slotOrder = buildSlotOrder(data);
 
-  // ── SINGLE-PAGE (no-scroll, desktop) MODE ────────────────────────────────
-  // When true, the AI is told to fit the ENTIRE generated UI on one desktop
-  // screen so the visitor never scrolls (optimized for computer/laptop).
-  //
-  // TO REVERT: set SINGLE_PAGE_MODE to false. That returns the prompt to its
-  // original neutral behavior — it will NOT ask for a single no-scroll page,
-  // and it will NOT ask for a longer scrolling page either. See NOTES.md.
-  const SINGLE_PAGE_MODE = true;
-
-  const systemPromptLines = [
-    "You are a world-class web designer. You output ONLY a single, complete,",
-    "self-contained HTML document. No markdown, no code fences, no commentary,",
-    "no explanation before or after. Your very first characters must be <!DOCTYPE html>.",
+  const systemPrompt = [
+    "You are a world-class UI designer. A portfolio is revealed on screen field",
+    "by field, and YOU design how it looks. You output ONLY a plain-text stream in",
+    "a simple line protocol. No markdown, no code fences, no commentary, no HTML.",
     "",
-    "Rules for the document:",
-    "- All CSS in a <style> tag and any JS in a <script> tag — one file, no external requests",
-    "  except optionally Google Fonts.",
-    "- It must be a polished, creative, fully responsive portfolio website.",
-    "- Include EVERY piece of information from the portfolio data you are given:",
-    "  name, title, bio, skills, all projects, all experience, education, links, everything.",
-    "- Make links real <a> tags using the URLs provided.",
-    "- Add tasteful animations and micro-interactions. Be bold and distinctive, not generic.",
-    "- Structure the HTML so it looks good even while streaming in: put the <style> tag",
-    "  early in <head>, and order the <body> top-to-bottom in visual order.",
-    "- Keep it CONCISE and fast to generate: the entire HTML document should be roughly",
-    "  150 lines total (about 130-170 is fine). A tight, elegant page renders quickly and",
-    "  looks intentional — favor clean design over length, and do not pad the code.",
-  ];
-
-  if (SINGLE_PAGE_MODE) {
-    systemPromptLines.push(
-      "- SINGLE PAGE, NO SCROLLING (optimized for computer): the ENTIRE page MUST fit",
-      "  within one desktop viewport (design for ~1440x900, a typical laptop screen) so",
-      "  the visitor never has to scroll. Set html and body to height:100vh with",
-      "  overflow:hidden. Fit ALL sections on that one screen using a compact",
-      "  multi-column / grid layout, scaling spacing and font sizes down as needed.",
-      "  Nothing may overflow off-screen — everything is visible at once."
-    );
-  }
-
-  const systemPrompt = systemPromptLines.join("\n");
-
-  const userPrompt = [
-    `Design a website UI for this website based on the style of: ${words.join(", ")}.`,
+    "Output EXACTLY this structure and nothing else:",
     "",
-    "Let those three words genuinely drive the visual direction — colors, typography,",
-    "layout, texture, motion. Interpret them creatively.",
+    "1) A line containing only: @theme",
+    "2) Then raw CSS (NO <style> tag, NO code fences) that styles the exact class",
+    "   names listed below. Base the ENTIRE visual direction — palette, typography,",
+    "   spacing, borders, radius, shadows — on the three style words you are given.",
+    "   Override the :root design tokens and add rules for these classes:",
+    "     :root (set --ui-bg,--ui-fg,--ui-muted,--ui-accent,--ui-border,--ui-card,--ui-chip)",
+    "     .ui-root .ui-name .ui-title .ui-meta .ui-email .ui-bio",
+    "     .ui-section .ui-label .ui-links .ui-link .ui-skills .ui-chip",
+    "     .ui-projects .ui-card .ui-card h3 .ui-card p .ui-tech .ui-tag .ui-cardlink",
+    "     .ui-exp-list .ui-exp .ui-exp-role .ui-exp-co .ui-exp-period .ui-exp-sum",
+    "     .ui-edu .ui-fun",
+    "   Keep the CSS compact (~60-110 lines). Do NOT use @import or external fonts.",
+    "   Make it distinctive and genuinely themed by the words — not generic.",
+    "3) A line containing only: @endtheme",
+    "4) Then one line per field to reveal, in this EXACT order, nothing else on the line:",
+    "     @show <slotid>",
+    "   Use these slot ids, in this order:",
+    "     " + slotOrder.join(" "),
+    "5) A final line containing only: @done",
     "",
-    "Here is all of the website's data. Every field must appear in the page:",
-    "",
-    dataJson,
+    "Do NOT output any HTML tags. Do NOT restate the portfolio data (the page already",
+    "has it). Only: @theme, CSS, @endtheme, the @show lines, then @done.",
   ].join("\n");
 
-  // Stream: header line first, then raw HTML as it generates.
+  const userPrompt = [
+    `Style words to design around: ${words.join(", ")}.`,
+    "Let these three words genuinely drive the palette, typography, and feel.",
+    "",
+    "For context, here is the portfolio data being displayed (do NOT echo it back —",
+    "just design a theme that suits it):",
+    "",
+    dataJson,
+    "",
+    "Now output the @theme CSS, then @endtheme, then the @show lines in the exact",
+    "order given, then @done.",
+  ].join("\n");
+
+  // Stream: JSON header line first (style words), then the protocol.
   res.writeHead(200, {
     "Content-Type": "text/plain; charset=utf-8",
     "Cache-Control": "no-cache, no-transform",
